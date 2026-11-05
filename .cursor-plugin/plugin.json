@@ -1,0 +1,13 @@
+{
+  "name": "emissaoja",
+  "description": "Issue Brazilian service invoices (NFS-e) from Cursor through the national Emissor Nacional, without a digital certificate: emissaoja MCP server plus a rule for writing NFS-e integration code (API de NFS-e nacional, MEI e Simples Nacional).",
+  "version": "1.0.0",
+  "logo": "assets/logo.png",
+  "homepage": "https://emissaoja.com.br/emitir-nota-fiscal-por-ia",
+  "license": "MIT",
+  "keywords": ["nfse", "nfs-e", "nota-fiscal", "emissor-nacional", "brazil", "invoice", "mcp", "api-nfse"],
+  "author": {
+    "name": "emissaoja",
+    "url": "https://emissaoja.com.br"
+  }
+}

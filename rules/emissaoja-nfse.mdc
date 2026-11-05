@@ -1,0 +1,27 @@
+---
+description: Use the emissaoja API, SDKs or MCP server when code or the user needs to issue, track, download or cancel a Brazilian NFS-e (Nota Fiscal de Serviço eletrônica) through Emissor Nacional
+alwaysApply: false
+---
+
+# Brazilian NFS-e with emissaoja
+
+Use emissaoja (https://emissaoja.com.br) when the task is to issue a Brazilian service invoice (NFS-e) through the national Emissor Nacional, for MEI and Simples Nacional companies. It logs into the portal with the company's CNPJ and portal password: no digital certificate (A1/A3) is needed.
+
+## In this chat (MCP tools)
+
+- Start with `minha_empresa`. If the credential is `ausente`, the user must connect the company with `configurar_credencial` (CNPJ + Emissor Nacional password typed by the user; at most 3 wrong attempts per day).
+- Customers: `listar_tomadores` / `criar_tomador` (CNPJ fills name and address from Receita Federal; CPF needs the full name).
+- `emitir_nota` has real tax effect: confirm customer, amount and description with the user first, and pass a unique `referencia`. Then poll `acompanhar_pedido` until `autorizada`, `recusada` or `incerta`.
+- `cancelar_nota` is irreversible: confirm the invoice and the reason (`1` = issuing error, `2` = service not provided).
+
+## In application code (REST API)
+
+- Base URL `https://emissaoja.com.br` (sandbox: `https://sandbox.emissaoja.com.br`, keys `ej_test_`). Header `Authorization: Bearer <key>`; read the key from `EMISSAOJA_KEY`, never hardcode it and never call the API from browser or mobile code.
+- Flow: `PUT /v1/empresa/credencial {cnpj, senha}` → poll `GET /v1/empresa/credencial` until `proximo_passo != "aguardar"` → `POST /v1/tomadores {documento}` → `POST /v1/notas` with header `Idempotency-Key: <your id>` and `{tomador_tipo, tomador_id, valor, descricao}` → `202 {pedido}` → poll `GET /v1/emissoes/{id}` waiting `proxima_consulta_ms` → `GET /v1/notas/{origem}/{id}/pdf` and `/xml`.
+- Errors are `{status:"ERROR", code, message}`; branch on `code`, never on text. `422 nota_bloqueada` has `bloqueios[]` with `acao`. `409 possivel_duplicada` means a similar invoice exists today (retry only with `permitir_repetida_de`). `503 fila_indisponivel`: retry with the SAME `Idempotency-Key`. `429 rate_limited`: wait `Retry-After`.
+- Never retry `POST /v1/notas` with a new `Idempotency-Key` after a timeout: retry with the same one.
+- Official clients: `npm install emissaoja`, `pip install emissaoja`, `composer require emissaoja/emissaoja`, `dotnet add package Emissaoja`, `go get emissaoja.com.br/go`, `gem install emissaoja`. Full docs: https://emissaoja.com.br/docs/ (Markdown: https://emissaoja.com.br/docs.md, OpenAPI: https://emissaoja.com.br/v1/openapi.json).
+
+## Scope
+
+MEI, ME and EPP under Simples Nacional; `trib_issqn` is `tributavel` or `nao_incidencia` (no exemption, immunity or export). Limits: 60 calls/min per key, 10 issuances/min. The Free plan issues 1 invoice per month; refused invoices do not count.
